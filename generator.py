@@ -20,9 +20,6 @@ if (len(sys.argv) == 2):
 with open(json_file_name, 'r') as json_open:
     json_object = json.load(json_open)
 
-with open('UniqueValue.h', mode='w') as f2:
-    print("Init")
-
 binName = 'fireworks-robot'
 binPath = 'BUILD/NUCLEO_F303K8/ARMC6/'
 
@@ -32,8 +29,7 @@ compile_fail_list = []
 with open('UniqueValue.h', mode='r', encoding='utf_8') as f:
     # original_file = f.read()
     original_file_line = f.readlines()
-    for i in range(len(json_object['robot'])):
-        robot = json_object['robot'][i]
+    for robot in json_object['robot']:
 
         data_lines = ['#define MOVE_LENGTH @\n', '#define REPLACE_MOVE @\n',
                       '#define COLOR_LENGTH @\n', '#define REPLACE_COLOR @\n']
@@ -68,15 +64,15 @@ with open('UniqueValue.h', mode='r', encoding='utf_8') as f:
 
         if os.path.exists(binPath + binName + '.bin'):
             os.rename(binPath + binName + '.bin',
-                      binPath + binName + str(i) + '.bin')
+                      binPath + binName + str(robot['number']) + '.bin')
 
-        if os.path.exists(binPath + binName + str(i) + '.bin'):
-            print('ロボット' + str(i) + 'のコンパイルに成功しました')
+        if os.path.exists(binPath + binName + str(robot['number']) + '.bin'):
+            print('\nロボット' + str(robot['number']) + 'のコンパイルに成功しました\n')
         else:
-            print('ロボット' + str(i) + 'のコンパイルに失敗しました')
-            compile_fail_list.append(i)
+            print('\nロボット' + str(robot['number']) + 'のコンパイルに失敗しました\n')
+            compile_fail_list.append(robot['number'])
 
-print('すべてのコンパイルが終了しました')
+print('\nすべてのコンパイルが終了しました')
 
 if not len(compile_fail_list) == 0:
     print('コンパイルに失敗したリスト:{}'.format(compile_fail_list))
