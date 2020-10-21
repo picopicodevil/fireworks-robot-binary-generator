@@ -20,57 +20,87 @@ if (len(sys.argv) == 2):
 with open(json_file_name, 'r') as json_open:
     json_object = json.load(json_open)
 
+with open('parameter.json', 'r') as json_open:
+    parameter_object = json.load(json_open)
+
 binName = 'fireworks-robot'
 binPath = 'BUILD/NUCLEO_F303K8/ARMC6/'
 
 remove_glob(binPath + '*.bin')
 compile_fail_list = []
 
-with open('UniqueValue.h', mode='r', encoding='utf_8') as f:
-    # original_file = f.read()
-    original_file_line = f.readlines()
-    for robot in json_object['robot']:
+for robot in json_object['robot']:
 
-        data_lines = ['#define MOVE_LENGTH @\n', '#define REPLACE_MOVE @\n',
-                      '#define COLOR_LENGTH @\n', '#define REPLACE_COLOR @\n']
+    data_lines = []
 
-        data_lines[0] = data_lines[0].replace('@', str(len(robot['move'])))
+# moveの設定
+    data_lines.append('#define MOVE_LENGTH ' + str(len(robot['move'])) + '\n')
 
-        move_string = '{'
-        for direction in robot['move']:
-            move_string += '"' + direction + '",'
-        move_string = move_string.rstrip(',')
-        move_string += '}'
-        data_lines[1] = data_lines[1].replace('@', move_string)
+    move_string = '{'
+    for direction in robot['move']:
+        move_string += '"' + direction + '",'
+    move_string = move_string.rstrip(',')
+    move_string += '}'
+    data_lines.append('#define REPLACE_MOVE ' + move_string + '\n')
 
-        data_lines[2] = data_lines[2].replace('@', str(len(robot['color'])))
+# colorの設定
+    data_lines.append('#define COLOR_LENGTH ' +
+                      str(len(robot['color'])) + '\n')
 
-        color_string = '{'
-        for data in robot['color']:
-            color_string += '{'
-            for element in data:
-                color_string += str(element) + ','
-            color_string = color_string.rstrip(',')
-            color_string += '},'
+    color_string = '{'
+    for data in robot['color']:
+        color_string += '{'
+        for element in data:
+            color_string += str(element) + ','
         color_string = color_string.rstrip(',')
-        color_string += '}'
-        data_lines[3] = data_lines[3].replace('@', color_string)
+        color_string += '},'
+    color_string = color_string.rstrip(',')
+    color_string += '}'
+    data_lines.append('#define REPLACE_COLOR ' + color_string + '\n')
 
-        with open('UniqueValue.h', mode='w') as f2:
-            f2.writelines(data_lines)
 
-        subprocess.run(
-            ['mbed', 'compile', '-m', 'NUCLEO_F303K8', '-t' 'ARMC6'], shell=True)
+# その他
+    if str(robot['number']) in parameter_object:
+        parameter = parameter_object[str(robot['number'])]
+    else:
+        parameter = parameter_object['default']
 
-        if os.path.exists(binPath + binName + '.bin'):
-            os.rename(binPath + binName + '.bin',
-                      binPath + binName + str(robot['number']) + '.bin')
+    data_lines.append('#define COLOR_THRESHOLD ' +
+                      str(parameter['colorThreshold']) + 'f\n')
 
-        if os.path.exists(binPath + binName + str(robot['number']) + '.bin'):
-            print('\nロボット' + str(robot['number']) + 'のコンパイルに成功しました\n')
-        else:
-            print('\nロボット' + str(robot['number']) + 'のコンパイルに失敗しました\n')
-            compile_fail_list.append(robot['number'])
+    data_lines.append('#define TURN_LEFT_WHEEL_LEFT_PWM ' +
+                      str(parameter['turnLeftWheelLeftPwm']) + 'f\n')
+
+    data_lines.append('#define TURN_LEFT_WHEEL_RIGHT_PWM ' +
+                      str(parameter['turnLeftWheelRightPwm']) + 'f\n')
+
+    data_lines.append('#define TURN_LEFT_SLEEP_MS ' +
+                      str(parameter['turnLeftSleepMs']) + 'ms\n')
+
+    data_lines.append('#define TURN_RIGHT_WHEEL_LEFT_PWM ' +
+                      str(parameter['turnRightWheelLeftPwm']) + 'f\n')
+
+    data_lines.append('#define TURN_RIGHT_WHEEL_RIGHT_PWM ' +
+                      str(parameter['turnRightWheelRightPwm']) + 'f\n')
+
+    data_lines.append('#define TURN_RIGHT_SLEEP_MS ' +
+                      str(parameter['turnRightSleepMs']) + 'ms\n')
+
+    with open('UniqueValue.h', mode='w') as f2:
+        f2.writelines(data_lines)
+
+    subprocess.run(
+        ['mbed', 'compile', '-m', 'NUCLEO_F303K8', '-t' 'ARMC6'], shell=True)
+
+    if os.path.exists(binPath + binName + '.bin'):
+        os.rename(binPath + binName + '.bin',
+                  binPath + binName + str(robot['number']) + '.bin')
+
+    if os.path.exists(binPath + binName + str(robot['number']) + '.bin'):
+        print('ロボット' + str(robot['number']) + 'のコンパイルに成功しました\n')
+    else:
+        print('ロボット' + str(robot['number']) + 'のコンパイルに失敗しました\n')
+        compile_fail_list.append(robot['number'])
 
 print('\nすべてのコンパイルが終了しました')
 
